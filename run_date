@@ -3,6 +3,6 @@
 echo `date` '---' $0 started
 
 while true ;do
+    sleep 3
     echo `date` '---' $0
-    sleep 1
 done
