@@ -1,21 +1,21 @@
 # HEALTHCHECK to be used for controlling the intialisation sequence
 #
-Offenbar ist die depends_on Erweiterung von 2.1 nicht in die Version 3 übernommen worden.
+Offenbar ist die `depends_on` Erweiterung von 2.1 nicht in die Version 3 übernommen worden.
 
-In der Tat sind haelthcheck und condition: service_healthy zur Steuerung
+In der Tat sind `haelthcheck` und `condition: service_healthy` zur Steuerung
 der Initialisieriungs Reihenfolge noch nicht ausgereift:
 
 Der aller-erste healthcheck wird erst nach dem ersten Ablauf von interval
 ausgeführt. Erst dann wechselt der status von start zu haelthy oder not-healthy.
-Alle abhängigen container die service_haelthy prüfen müssen die interval-Zeit
+Alle abhängigen container die `service_haelthy` prüfen müssen die interval-Zeit
 warten.
 
-Der Vorgabewert von interval ist 30sec. 
+Der Vorgabewert von `interval` ist 30sec. 
 Das ist eine lange Zeit wenn die Initialisierungs nur wenige Sekunden oder gar
 nur Sekundenbruchteile in Anspruch nimmt.
 
-Eine (un-)praktische Konsequenz ist, interval auf einen kleinen wert zu
-setzen. Das hat den Seiteneffekt, dass haelthcheck mit unnötiger oder gar
+Eine (un-)praktische Konsequenz ist, `interval` auf einen kleinen wert zu
+setzen. Das hat den Seiteneffekt, dass `haelthcheck` mit unnötiger oder gar
 unerwünschter hoher Frequenz aufgerufen wird
 und die logs mit haelthcheck Meldungen aufgefüllt werden.
 
@@ -24,10 +24,9 @@ zu steueren, um dann, nach erfolgreicher Initialisierung des containers auf weit
 
 Eine praktische Erweiterung wären folgende Optionen (hier mit beipspielhaften Werten):
 
-* init-delay: 3s
-* init-retries: 3
-* interval: 0s
-
+* `init-delay: 3s` 
+* `init-retries: 3` 
+* `interval: 0s` 
 
 Mit init-delay gibt man eine erste Wartezeit bis zum ersten haelthcheck in
 der startphase an.
@@ -52,8 +51,8 @@ healthy beendet wird.
 
 # LOG eines docker-compose up.
 healthcheck interval ist für die services 'one' und 'two' auf 10s gesetzt. 
-* Im service `one` ist der healthcheck beim **ersten** Aufruf erfolgreich; 
-* Im service `two` ist der healthcheck erst beim **zweiten** Aufruf erfolgreich
+* Im service `one` ist der healthcheck nach 10 sec - beim **ersten** Aufruf - erfolgreich; 
+* Im service `two` ist der healthcheck erst nach 20sec - beim **zweiten** Aufruf - erfolgreich. 
 Im Log von docker-compose erscheinen die Meldung nur pro container in der korrekten zeitlichen
 Reihenfolge.
 
@@ -65,7 +64,7 @@ Einfügte Kommentare beginnen mit ...
 ksylla@ionay:~/Projekte/BDE/healthcheck-lab$ docker-compose up
 Creating network "healthchecklab_default" with the default driver
 Creating healthchecklab_one_1
-... wait for ~10sc
+... wait for ~10sec
 Creating healthchecklab_two_1
 ... wait for ~22sec
 Creating healthchecklab_three_1
@@ -80,7 +79,8 @@ two_1    | Thu Mar 16 10:47:48 UTC 2017 : 0 > 0 healthcheck exit 1
     ...                     +9 sec
 one_1    | Thu Mar 16 10:47:57 UTC 2017 : 2 > -1 healthcheck exit 0
 two_1    | Thu Mar 16 10:47:58 UTC 2017 : 1 > 0 healthcheck exit 0
-    ...  31 seconds after start. At this point in time the previous log messages appear en bloc.
+    ... ### 31 seconds after start.
+    ... ### At this point in time the previous log messages appear eventually en bloc.
 three_1  | Thu Mar 16 10:47:58 UTC 2017 --- /run_date started
 three_1  | Thu Mar 16 10:48:01 UTC 2017 --- /run_date
 three_1  | Thu Mar 16 10:48:04 UTC 2017 --- /run_date
