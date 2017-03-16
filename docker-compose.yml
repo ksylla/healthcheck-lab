@@ -1,0 +1,19 @@
+version: '2.1'
+services:
+    first:
+        build:
+            context: .
+        image: hc-test
+        environment:
+            MAX: "-1"
+        healthcheck:
+            test: /healthcheck
+            interval: -1s
+        command: /run_tail
+    second:
+        image: hc-test
+        depends_on:
+            first:
+                condition: service_healthy
+        command: /run_date
+            

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+HCLOG=/tmp/healthcheck.log
+touch $HCLOG
+
+echo `date` '---' $0 started MAX=$MAX : tail -f $HCLOG
+
+tail -f $HCLOG
+

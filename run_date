@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo `date` '---' $0 started
+
+while true ;do
+    echo `date` '---' $0
+    sleep 1
+done

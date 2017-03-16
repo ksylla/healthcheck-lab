@@ -1,0 +1,24 @@
+#!/bin/bash
+
+MAX=${MAX:-"-1"}
+
+HCLOG=/tmp/healthcheck.log
+
+if [ ! -e $HCLOG ] ;then
+    touch $HCLOG
+fi
+
+C=$(wc -l $HCLOG | cut -d ' ' -f 1 )
+
+#echo C= $C  -gt  MAX= $MAX 
+
+if [[ $C -gt $MAX ]] ;then
+    RC=0
+else
+    RC=1
+fi
+
+echo `date` : $C '>' $MAX healthcheck exit $RC >> $HCLOG
+
+exit $RC
+
