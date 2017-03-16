@@ -1,5 +1,17 @@
 # HEALTHCHECK to be used for controlling the intialisation sequence
-#
+
+## install and run an experiment
+```
+git clone https://github.com/ksylla/healthcheck-lab.git
+cd healthcheck-lab
+docker-compose build one
+docker-compose up
+# stop and kill:
+<Ctrl-C><Ctrl-C>
+docker-compose down
+```
+
+# my comments
 Offenbar ist die `depends_on` Erweiterung von 2.1 nicht in die Version 3 übernommen worden.
 
 In der Tat sind `haelthcheck` und `condition: service_healthy` zur Steuerung
@@ -21,6 +33,8 @@ und die logs mit haelthcheck Meldungen aufgefüllt werden.
 
 Ganz abgesehen davon. Es ist nicht möglich nur die Initialisierungsreihenfolge
 zu steueren, um dann, nach erfolgreicher Initialisierung des containers auf weitere haelthchecks zu verzichten.
+
+# my proposals
 
 Eine praktische Erweiterung wären folgende Optionen (hier mit beipspielhaften Werten):
 
@@ -49,7 +63,8 @@ Mit init-retries kann man eine lange Intialisierungsphase definieren,
 die aber in der Rate von init-delay geprüft und bei Erfolg mit dem Zustand
 healthy beendet wird.
 
-# LOG eines docker-compose up.
+# LOG of a docker-compose up.
+
 healthcheck interval ist für die services 'one' und 'two' auf 10s gesetzt. 
 * Im service `one` ist der healthcheck nach 10 sec - beim **ersten** Aufruf - erfolgreich; 
 * Im service `two` ist der healthcheck erst nach 20sec - beim **zweiten** Aufruf - erfolgreich. 
