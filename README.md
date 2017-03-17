@@ -18,12 +18,12 @@ be patient: The log messages of the containers appear after a delay of about 33 
 
 # my comments
 
-The `haelthcheck` und `condition: service_healthy` options of  version 2.1
+The `haelthcheck` and `condition: service_healthy` options of  version 2.1
 provide two features:
 * monitor the service of a container operating properly (`healthy`) or not (`unhaelthy` or `starting`).
 * schedule the initialisation of containers according to the `depends_on` relation of the services.
 
-These features are parameterized both the options `interval` `retries` `time-out`.
+These features are parameterized both by the options `interval` `retries` `timeout` and `test`. 
 Unfortunately monitoring and initialisation scheduling cannot be specified independently.
 
 Long monitoring intervals may be appropriate and the default value of interval is 30 seconds.
@@ -32,16 +32,17 @@ This causes a long delay for the first healthcheck after container start and slo
 For initialisation scheduling we want to signal a service healthy as soon as possible.
 Thus a short interval is useful; many retries may be specified, in order to handle occasional long initialisations. 
 But the short interval causes a high frequency of healthchecks at monitoring and a high number of retries
-causes high latency of signalling non healthyness.
+causes high latency of signalling `unhaelthy`.
 
 Currently monitoring cannot be disabled, if initialisation scheduling is required.
 
 # my proposal
 
-The following options may help to separate the handling of an initialisation phase and monitoring.
+The following options (with example values) may help to separate the handling of an initialisation phase and monitoring.
+
 
 * `init_delay: 3s` 
-specifies the time to wait after container start until the first healthcheck is executed. 
+   specifies the time to wait after container start until the first healthcheck is executed. 
   * success: the container status changes to `healthy`
   * failure: the container remains in state `starting`
 
@@ -62,7 +63,7 @@ A negative value of `interval` or `init_delay` should be rejected.
 
 Three services are started in dependency order `one` -\> `two` -\> `three`
 
-Healthcheck interval of the services `one` und `two` is set to 10s. 
+Healthcheck interval of the services `one` and `two` is set to 10s. 
 Service `three` runs no healthcheck.
 
 * In service `one` the healthcheck succeeds at the *first* execution, 10s after the start of `one`.
