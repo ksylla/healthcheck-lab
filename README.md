@@ -1,4 +1,8 @@
-# HEALTHCHECK to be used for controlling the intialisation sequence
+# HEALTHCHECK for monitoring and for controlling the intialisation sequence -- compose file version 2.1
+
+The extension of the `depends_on` option in version 2.1 is not available in version 3.0 and 3.1.
+
+The `depends_on` option of version 3 is the same as in version 2.
 
 ## install and run an experiment
 ```
@@ -10,92 +14,94 @@ docker-compose up
 <Ctrl-C><Ctrl-C>
 docker-compose down
 ```
+be patient: The log messages of the containers appear after a delay of about 33 seconds.
 
 # my comments
-Offenbar ist die `depends_on` Erweiterung von 2.1 nicht in die Version 3 übernommen worden.
 
-In der Tat sind `haelthcheck` und `condition: service_healthy` zur Steuerung
-der Initialisieriungs Reihenfolge noch nicht ausgereift:
+The `haelthcheck` und `condition: service_healthy` options of  version 2.1
+provide two features:
+* monitor the service of a container operating properly (`healthy`) or not (`unhaelthy` or `starting`).
+* schedule the initialisation of containers according to the `depends_on` relation of the services.
 
-Der aller-erste healthcheck wird erst nach dem ersten Ablauf von interval
-ausgeführt. Erst dann wechselt der status von start zu haelthy oder not-healthy.
-Alle abhängigen container die `service_haelthy` prüfen müssen die interval-Zeit
-warten.
+These features are parameterized both the options `interval` `retries` `time-out`.
+Unfortunately monitoring and initialisation scheduling cannot be specified independently.
 
-Der Vorgabewert von `interval` ist 30sec. 
-Das ist eine lange Zeit wenn die Initialisierungs nur wenige Sekunden oder gar
-nur Sekundenbruchteile in Anspruch nimmt.
+Long monitoring intervals may be appropriate and the default value of interval is 30 seconds.
+This causes a long delay for the first healthcheck after container start and slows down the intialisation of the stack.
 
-Eine (un-)praktische Konsequenz ist, `interval` auf einen kleinen wert zu
-setzen. Das hat den Seiteneffekt, dass `haelthcheck` mit unnötiger oder gar
-unerwünschter hoher Frequenz aufgerufen wird
-und die logs mit haelthcheck Meldungen aufgefüllt werden.
+For initialisation scheduling we want to signal a service healthy as soon as possible.
+Thus a short interval is useful; many retries may be specified, in order to handle occasional long initialisations. 
+But the short interval causes a high frequency of healthchecks at monitoring and a high number of retries
+causes high latency of signalling non healthyness.
 
-Ganz abgesehen davon. Es ist nicht möglich nur die Initialisierungsreihenfolge
-zu steueren, um dann, nach erfolgreicher Initialisierung des containers auf weitere haelthchecks zu verzichten.
+Currently monitoring cannot be disabled, if initialisation scheduling is required.
 
-# my proposals
+# my proposal
 
-Eine praktische Erweiterung wären folgende Optionen (hier mit beipspielhaften Werten):
+The following options may help to separate the handling of an initialisation phase and monitoring.
 
-* `init-delay: 3s` 
-* `init-retries: 3` 
-* `interval: 0s` 
+* `init_delay: 3s` 
+specifies the time to wait after container start until the first healthcheck is executed. 
+  * success: the container status changes to `healthy`
+  * failure: the container remains in state `starting`
 
-Mit init-delay gibt man eine erste Wartezeit bis zum ersten haelthcheck in
-der startphase an.
+* `init_retries: 3` 
+  * success: the container status changes to `healthy`
+  * failure: the container remains in state `starting` 
+    but if all retries failed, the status is set to `unhealthy`
+  
+if the option `init_delay` is not specified or set to the value 0s, 
+healthchecks for initialisation are disabled.
 
-Wenn das fehlschlägt werden maximal init-retries weitere Versuche mit der gleichen
-Wartezeit ausgeführt. 
-Bis zum ersten erfolgreichen init healthcheck bleibt der
-container im Zustand started.
+if the option `interval` is not specified or set to the value 0s, 
+monitoring is disabled.
 
-Nach einem erfolgreichen init healthcheck und  
-* wenn interval größer 0s ist,
-wird die mit interval: retries: usw. spezifizierte haelthcheck Folge gestartet;
-* wenn interval auf einen Wert kleiner gleich 0s gesetzt ist,
-dann werden keine weiteren haelthchecks mehr ausgeführt.
+A negative value of `interval` or `init_delay` should be rejected.
 
-Wenn kein init healthcheck erfolgreich ist, wird der container in den Zustand
-unhealthy gesetzt.
+# LOG of a docker-compose up.  Version 2.1
 
-Mit init-retries kann man eine lange Intialisierungsphase definieren,
-die aber in der Rate von init-delay geprüft und bei Erfolg mit dem Zustand
-healthy beendet wird.
+Three services are started in dependency order `one` -\> `two` -\> `three`
 
-# LOG of a docker-compose up.
+Healthcheck interval of the services `one` und `two` is set to 10s. 
+Service `three` runs no healthcheck.
 
-healthcheck interval ist für die services 'one' und 'two' auf 10s gesetzt. 
-* Im service `one` ist der healthcheck nach 10 sec - beim **ersten** Aufruf - erfolgreich; 
-* Im service `two` ist der healthcheck erst nach 20sec - beim **zweiten** Aufruf - erfolgreich. 
-Im Log von docker-compose erscheinen die Meldung nur pro container in der korrekten zeitlichen
-Reihenfolge.
+* In service `one` the healthcheck succeeds at the *first* execution, 10s after the start of `one`.
+* In service `two` the healthcheck succeeds at the *second* execution, 20s after the start of `two`.
 
-Die Log-Meldungen des folgenden Beispiels wurden mittels 'sort -k 6' nachträglich
-entsprechend der Uhrzeit geordnet. 
-Einfügte Kommentare beginnen mit ...
+In the log of docker-compose the messages of a container appear in the time sequence of its log events.
+But the log events of different containers are not garanteed to appear in correct timely order.
+
+Therefore the docker-compose messages of the example below are sorted by `sort -k 6`:
+The log now shows all log events in correct timely order.
+
+Inserted comments lines are marked with `####`.
 
 ```
-ksylla@ionay:~/Projekte/BDE/healthcheck-lab$ docker-compose up
+ksylla@ionay:~/BDE/healthcheck-lab$ docker-compose up
 Creating network "healthchecklab_default" with the default driver
 Creating healthchecklab_one_1
-... wait for ~10sec
+    #### pause of ~10 sec
 Creating healthchecklab_two_1
-... wait for ~22sec
+    #### pause of ~22 sec
 Creating healthchecklab_three_1
 Attaching to healthchecklab_one_1, healthchecklab_two_1, healthchecklab_three_1
 one_1    | Thu Mar 16 10:47:27 UTC 2017 --- /run_tail started MAX=-1 : tail -f /tmp/healthcheck.log
-    ...                    +10 sec
+    #### wait for          +10 sec
+    #### service one: the first healthcheck after one interval succeeds
 one_1    | Thu Mar 16 10:47:37 UTC 2017 : 0 > -1 healthcheck exit 0
+    #### service one is haelthy: start service two
 two_1    | Thu Mar 16 10:47:38 UTC 2017 --- /run_tail started MAX=0 : tail -f /tmp/healthcheck.log
-    ...                     +9 sec
+    ####                    +9 sec
 one_1    | Thu Mar 16 10:47:47 UTC 2017 : 1 > -1 healthcheck exit 0
+    #### service two: the first healthcheck after the first interval fails
 two_1    | Thu Mar 16 10:47:48 UTC 2017 : 0 > 0 healthcheck exit 1
-    ...                     +9 sec
+    ####                    +9 sec
 one_1    | Thu Mar 16 10:47:57 UTC 2017 : 2 > -1 healthcheck exit 0
+    #### 31 seconds after docker-compose up.
+    #### service two: the second healthcheck after two intervals succeeds
 two_1    | Thu Mar 16 10:47:58 UTC 2017 : 1 > 0 healthcheck exit 0
-    ... ### 31 seconds after start.
-    ... ### At this point in time the previous log messages appear eventually en bloc.
+    #### service two is healthy: start service three
+    #### At this point in time the previous log messages appear en bloc.
 three_1  | Thu Mar 16 10:47:58 UTC 2017 --- /run_date started
 three_1  | Thu Mar 16 10:48:01 UTC 2017 --- /run_date
 three_1  | Thu Mar 16 10:48:04 UTC 2017 --- /run_date
